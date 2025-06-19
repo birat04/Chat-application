@@ -9,34 +9,38 @@ interface User {
 let allSockets: User[] = [];
 
 wss.on("connection", (socket) => {
-
     socket.on("message", (message) => { 
         //@ts-ignore
         const parsedMessage = JSON.parse(message);
         if(parsedMessage.type == "join"){
-            console.log("User joined room");
+            allSockets = allSockets.filter(u => u.socket !== socket);
             allSockets.push({
                 socket,
                 room: parsedMessage.payload.roomId
-            })
+            });
+            console.log("User joined room");
         }
-        if (parsedMessage.type == "chat"){
-            console.log("Message received");
-            let currentUserRoom = null;
-            for (let i =0; i<allSockets.length; i++){
-                if(allSockets[i].socket == socket){
-                    currentUserRoom = allSockets[i].room;
-                }
+        if (parsedMessage.type == "chat") {
+          let currentUserRoom = null;
+          for (let i = 0; i < allSockets.length; i++) {
+            if (allSockets[i].socket == socket) {
+              currentUserRoom = allSockets[i].room;
             }
-            for (let i = 0; i<allSockets.length; i++){
-                if(allSockets[i].room ==currentUserRoom){
-                    allSockets[i],socket.send(parsedMessage.payload.message);
+          }
+          for (let i = 0; i < allSockets.length; i++) {
+            if (allSockets[i].room == currentUserRoom) {
+              allSockets[i].socket.send(JSON.stringify({
+                type: "chat",
+                payload: {
+                  message: parsedMessage.payload.message
                 }
+              }));
             }
+          }
         }
-       
     });
 
-    
-
+    socket.on("close", () => {
+        allSockets = allSockets.filter(u => u.socket !== socket);
+    });
 });
